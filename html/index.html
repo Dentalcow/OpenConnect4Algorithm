@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Connect Four</title>
+<style>
+    #gameBoard {
+        display: grid;
+        grid-template-columns: repeat(7, 50px);
+        grid-gap: 5px;
+        margin-bottom: 20px;
+    }
+    .cell {
+        width: 50px;
+        height: 50px;
+        background-color: #f0f0f0;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+    }
+    .player1 { background-color: red; }
+    .player2 { background-color: yellow; }
+</style>
+</head>
+<body>
+<div id="gameBoard"></div>
+<button onclick="startGame()">Start Game</button>
+<div id="gameStatus"></div>
+
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+    const columns = 7;
+    const rows = 6;
+    let board = [];
+    let currentPlayer = 1;
+    const gameBoardElement = document.getElementById("gameBoard");
+    const gameStatusElement = document.getElementById("gameStatus");
+
+    function initializeGame() {
+        board = Array(rows).fill().map(() => Array(columns).fill(0));
+        currentPlayer = 1;
+        gameBoardElement.innerHTML = '';
+        createBoardUI();
+        updateGameStatus();
+    }
+
+    function createBoardUI() {
+        for (let row = 0; row < rows; row++) {
+            for (let col = 0; col < columns; col++) {
+                const cell = document.createElement("div");
+                cell.classList.add("cell");
+                cell.dataset.column = col;
+                cell.dataset.row = row;
+                gameBoardElement.appendChild(cell);
+            }
+        }
+        gameBoardElement.addEventListener("click", handleBoardClick);
+    }
+
+    function handleBoardClick(event) {
+        const col = event.target.dataset.column;
+        if (col && placeDisc(parseInt(col))) {
+            drawBoard();
+            if (checkWin(currentPlayer)) {
+                gameStatusElement.textContent = `Player ${currentPlayer} wins!`;
+                gameBoardElement.removeEventListener("click", handleBoardClick);
+                return;
+            }
+            currentPlayer = currentPlayer === 1 ? 2 : 1;
+            updateGameStatus();
+
+            // Placeholder for AI move
+            if (currentPlayer === 2) {
+                setTimeout(() => {
+                    const aiMove = calculateBestMove(); 
+                    placeDisc(aiMove);
+                    drawBoard();
+                    if (checkWin(currentPlayer)) {
+                        gameStatusElement.textContent = `Player ${currentPlayer} wins!`;
+                        gameBoardElement.removeEventListener("click", handleBoardClick);
+                        return;
+                    }
+                    currentPlayer = 1;
+                    updateGameStatus();
+                }, 500);
+            }
+        }
+    }
+
+    function placeDisc(col) {
+        for (let row = rows - 1; row >= 0; row--) {
+            if (board[row][col] === 0) {
+                board[row][col] = currentPlayer;
+                return true;
+            }
+        }
+        return false;
+    }
+
+    function drawBoard() {
+        for (let row = 0; row < rows; row++) {
+            for (let col = 0; col < columns; col++) {
+                const cell = gameBoardElement.children[row * columns + col];
+                cell.className = "cell";
+                if (board[row][col] === 1) {
+                    cell.classList.add("player1");
+                } else if (board[row][col] === 2) {
+                    cell.classList.add("player2");
+                }
+            }
+        }
+    }
+
+    function updateGameStatus() {
+        gameStatusElement.textContent = `Player ${currentPlayer}'s turn`;
+    }
+
+        function minimax(board, depth, alpha, beta, isMaximizingPlayer) {
+        if (depth == 0 || isGameOver(board)) {
+            return evaluateBoard(board, isMaximizingPlayer);
+        }
+
+        if (isMaximizingPlayer) {
+            let maxEval = -Infinity;
+            for (let col = 0; col < columns; col++) {
+                if (canPlaceDisc(board, col)) {
+                    placeDisc(board, col, 2); // Assume 2 is AI
+                    let eval = minimax(board, depth - 1, alpha, beta, false);
+                    undoMove(board, col);
+                    maxEval = Math.max(maxEval, eval);
+                    alpha = Math.max(alpha, eval);
+                    if (beta <= alpha) {
+                        break;
+                    }
+                }
+            }
+            return maxEval;
+        } else {
+            let minEval = Infinity;
+            for (let col = 0; col < columns; col++) {
+                if (canPlaceDisc(board, col)) {
+                    placeDisc(board, col, 1); // Assume 1 is the human player
+                    let eval = minimax(board, depth - 1, alpha, beta, true);
+                    undoMove(board, col);
+                    minEval = Math.min(minEval, eval);
+                    beta = Math.min(beta, eval);
+                    if (beta <= alpha) {
+                        break;
+                    }
+                }
+            }
+            return minEval;
+        }
+    }
+
+
+    function checkWin(player) {
+        // Horizontal check
+        for (let row = 0; row < rows; row++) {
+            for (let col = 0; col < columns - 3; col++) {
+                if (board[row][col] == player && board[row][col + 1] == player && board[row][col + 2] == player && board[row][col + 3] == player) {
+                    return true;
+                }
+            }
+        }
+
+        // Vertical check
+        for (let row = 0; row < rows - 3; row++) {
+            for (let col = 0; col < columns; col++) {
+                if (board[row][col] == player && board[row + 1][col] == player && board[row + 2][col] == player && board[row + 3][col] == player) {
+                    return true;
+                }
+            }
+        }
+
+        // Positive diagonal check
+        for (let row = 3; row < rows; row++) {
+            for (let col = 0; col < columns - 3; col++) {
+                if (board[row][col] == player && board[row - 1][col + 1] == player && board[row - 2][col + 2] == player && board[row - 3][col + 3] == player) {
+                    return true;
+                }
+            }
+        }
+
+        // Negative diagonal check
+        for (let row = 0; row < rows - 3; row++) {
+            for (let col = 0; col < columns - 3; col++) {
+                if (board[row][col] == player && board[row + 1][col + 1] == player && board[row + 2][col + 2] == player && board[row + 3][col + 3] == player) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    startGame();
+});
+
+function startGame() {
+    initializeGame();
+}
+</script>
+</body>
+</html>
